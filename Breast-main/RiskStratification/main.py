@@ -62,7 +62,7 @@ class Configuration:
             'output_dir': os.path.join(self.OUTPUT_DIR, 'processed_images'),
             'target_size': (224, 224),
             'max_slices': 10,
-            'save_debug_images': True,
+            #'save_debug_images': True,
             'normalization': 'minmax',
             'augmentation': True
         }
@@ -74,8 +74,6 @@ class Configuration:
         self.DL_MODEL_PARAMS = {
             'backbone': 'efficientnet',
             'use_pretrained': True,
-            'clinical_hidden_layers': [128, 64],
-            'fusion_hidden_layers': [256, 128],
             'dropout_rate': 0.3,
             'learning_rate': 0.0005,
             'batch_size': 16,
