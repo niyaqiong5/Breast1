@@ -1,5 +1,4 @@
 """
-Breast cancer risk stratification model - Improved deep learning model
 Realize multimodal fusion architecture based on pre-trained model
 """
 
