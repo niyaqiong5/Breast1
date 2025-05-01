@@ -1,0 +1,163 @@
+# Breast Cancer Risk Stratification Model
+
+A multimodal deep learning pipeline for breast cancer risk assessment that classifies patients into three risk categories (low, medium, high) using clinical data and CT imaging.
+
+## Overview
+
+This pipeline combines clinical features with CT scan data to perform risk stratification. The architecture uses a simple concatenation approach with separate processing branches for clinical and imaging data.
+
+## Architecture
+
+### Model Components
+
+1. **Clinical Branch**:
+   - Dense layer (64 units) with ReLU activation
+   - Batch Normalization
+   - Dropout (0.7)
+   - L2 regularization (0.02)
+
+2. **Image Branch**:
+   - Pre-trained EfficientNetB2 backbone (frozen)
+   - Global Average Pooling
+   - Dense layer (64 units)
+   - Batch Normalization
+   - Dropout (0.7)
+
+3. **Fusion and Classification**:
+   - Simple concatenation of clinical and image features
+   - Dense layer (64 units) with strong regularization
+   - Softmax output for 3-class classification
+
+## Installation
+
+```bash
+pip install tensorflow>=2.10.0
+pip install scikit-learn>=1.0.0
+pip install pandas numpy matplotlib seaborn
+pip install pydicom opencv-python scikit-image
+pip install tqdm joblib
+```
+
+## Data Structure
+
+### Required Data Format
+
+1. **Clinical Data (Excel)**:
+   - `PID`: Patient ID
+   - `density`: Breast density (A/B/C/D)
+   - `risk`: Risk category (low/medium/high)
+   - `history`: Family history (0/1)
+   - `年龄`: Age
+   - `BMI`: Body Mass Index
+
+2. **DICOM Files**:
+   ```
+   dicom_root_dir/
+   ├── patient_id/
+   │   └── series_id/
+   │       ├── slice_001.dcm
+   │       └── ...
+   ```
+
+3. **Segmentation Masks**:
+   ```
+   segmentation_root_dir/
+   ├── patient_id/
+   │   └── series_id/
+   │       ├── breast_mask.npy
+   │       └── glandular_tissue_mask.npy
+   ```
+
+## Configuration
+
+Edit `config.py` to set your parameters:
+
+```python
+DATA_PATHS = {
+    'excel_path': 'path/to/clinical_data.xlsx',
+    'dicom_root_dir': 'path/to/dicom_files',
+    'segmentation_root_dir': 'path/to/segmentation_masks'
+}
+
+```
+
+## Usage
+
+### Training
+
+```bash
+python main.py 
+
+### Options
+
+- `--use-all-slices`: Process all CT slices (default: subset)
+- `--focus-glandular`: Focus on glandular tissue regions
+- `--gpu-memory-limit`: Set GPU memory limit (MB)
+- `--mode`: Choose from train/evaluate/predict
+
+## Feature Processing
+
+### Clinical Features
+- Basic features: density, history, age, BMI
+- Derived features: age groups, BMI categories
+- Interaction features: density-age, density-BMI, density-history
+- Feature selection using ensemble method (ANOVA, mutual information, random forest)
+
+### Image Processing
+- Target size: 224x224
+- CLAHE enhancement for better contrast
+- ImageNet normalization (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+- Focus on glandular tissue regions
+
+## Training Details
+
+- **Optimizer**: Adam with learning rate 0.0001
+- **Loss**: Categorical crossentropy with class weights
+- **Callbacks**:
+  - Early stopping
+  - Model checkpoint (saves best validation accuracy)
+
+## Evaluation Metrics
+
+- Slice-level and patient-level accuracy
+- Confusion matrices
+- ROC curves and AUC scores
+- Classification reports (precision, recall, F1-score)
+
+## Output Structure
+
+```
+output_dir/
+├── models/
+│   └── multimodal_dl/
+│       ├── best_model.h5
+│       └── clinical_scaler.pkl
+├── features/
+│   ├── clinical_features.csv
+│   └── feature_importance.csv
+├── plots/
+│   ├── training_history.png
+│   ├── confusion_matrix.png
+│   └── roc_curve.png
+└── results/
+    └── predictions.csv
+```
+
+## Key Characteristics
+
+1. **Strong Regularization**: High dropout (0.7) and L2 regularization to prevent overfitting
+2. **Frozen Backbone**: Pre-trained weights are not fine-tuned
+3. **Simple Fusion**: Direct concatenation without attention mechanisms
+4. **Class Balancing**: Weighted loss function for imbalanced data
+5. **Patient-Level Evaluation**: Aggregates slice predictions per patient
+
+## Limitations
+
+- No complex fusion mechanisms (attention, cross-attention)
+- Fixed to EfficientNetB2 backbone
+- Strong regularization may limit model capacity
+- Requires pre-computed segmentation masks
+
+## Performance Notes
+
+The model is designed with strong regularization to prevent overfitting on small datasets. The high dropout rate (0.7) and frozen backbone ensure stable training but may limit performance on larger datasets.
