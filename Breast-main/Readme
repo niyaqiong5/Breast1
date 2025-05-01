@@ -1,0 +1,135 @@
+# Breast Segmentation from CT Scans
+
+A Python implementation for automatic breast segmentation from CT DICOM images, focusing on identifying breast tissue and glandular tissue regions.
+
+## Overview
+
+This tool processes CT scan DICOM series to automatically segment:
+- Breast tissue regions
+- Glandular tissue within the breast
+- Supporting anatomical structures (skin, thoracic cavity, fat, muscles)
+
+The segmentation algorithm follows a multi-step approach to accurately identify breast regions and separate them from surrounding tissues.
+
+## Requirements
+
+```bash
+pip install numpy
+pip install scipy
+pip install scikit-image
+pip install matplotlib
+pip install pydicom
+pip install SimpleITK
+```
+
+## Features
+
+- Automatic breast tissue segmentation from CT scans
+- Glandular tissue identification
+- Left and right breast connection using convex hull method
+- Multi-step segmentation process:
+  - Skin segmentation
+  - Thoracic cavity identification
+  - Fat tissue segmentation
+  - Muscle separation (anterior and posterior)
+  - Breast extent determination
+- Visualization tools for results
+- Output in multiple formats (numpy arrays, NIFTI, PNG)
+
+## Usage
+
+### Basic Usage
+
+```python
+from breast_segmentation import BreastSegmentation
+
+# Initialize segmenter
+segmenter = BreastSegmentation(dicom_folder_path)
+
+# Load DICOM series
+segmenter.load_dicom_series(study_id, series_id)
+
+# Perform segmentation
+breast_mask = segmenter.segment_breast()
+
+# Visualize results
+segmenter.visualize_segmentation()
+```
+
+### Batch Processing
+
+```python
+# Process entire dataset
+process_dicom_dataset(
+    dataset_path="D:/Data_noncontrast",
+    output_path="D:/Desktop/Data_noncontrast_segmentation"
+)
+```
+
+## Algorithm Steps
+
+1. **Skin Segmentation**: Identifies body boundary using HU thresholds
+2. **Thoracic Cavity Detection**: Approximates chest cavity using lung regions
+3. **Fat Tissue Segmentation**: Identifies fat based on HU values (-150 to -20)
+4. **Combined Tissue Segmentation**: Identifies muscles and glandular tissue
+5. **Muscle Separation**: 
+   - Separates posterior muscles
+   - Separates anterior muscles
+6. **Breast Extent Determination**: Defines vertical extent limited to upper chest
+7. **Left-Right Breast Connection**: Uses convex hull to connect breast regions
+
+## Output Structure
+
+```
+output_path/
+├── study_id/
+│   └── series_id/
+│       ├── breast_mask.npy
+│       ├── glandular_tissue_mask.npy
+│       ├── breast_mask.nii.gz
+│       └── visualizations/
+│           ├── slice_0000.png
+│           ├── mask_0000.png
+│           └── preview_all_slices.png
+```
+
+## Hounsfield Unit (HU) Ranges
+
+- Air: < -600
+- Fat: -150 to -20
+- Glandular/Muscle: 20 to 100
+- Lung tissue: < -400
+
+## Key Methods
+
+### `segment_breast()`
+Main method that performs complete breast segmentation pipeline.
+
+### `visualize_segmentation(slice_idx=None)`
+Visualizes segmentation results for a specific slice or representative slice.
+
+### `visualize_multiple_slices(interval=5, num_slices=3)`
+Shows segmentation across multiple slices at regular intervals.
+
+## Visualization
+
+The tool provides comprehensive visualization options:
+- Original CT slices with overlay masks
+- Separate views for glandular tissue, fat tissue, and final breast segmentation
+- Multi-slice previews
+- Individual slice exports
+
+## Limitations
+
+- Requires good quality CT scans
+- Best results with non-contrast/contrast CT
+- May need parameter tuning for different scan protocols
+- Assumes standard patient positioning
+
+## Example Output
+
+The segmentation produces:
+- Binary masks for breast regions
+- Separate masks for glandular tissue
+- Visualization images showing overlays
+- NIFTI format output for 3D visualization
