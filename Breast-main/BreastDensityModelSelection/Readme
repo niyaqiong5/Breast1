@@ -1,0 +1,169 @@
+# Breast Density Prediction Pipeline
+
+A comprehensive deep learning pipeline for breast density classification using 3D CT scan data. This pipeline includes model selection, data augmentation, and handling of rare classes using synthetic data generation.
+
+## Overview
+
+This pipeline automatically classifies breast density into four categories (A, B, C, D) from segmented CT scan data. It features:
+
+- Multiple deep learning architectures for model selection
+- Special handling for rare classes (A, B, D)
+- Synthetic data generation for balanced training
+- Comprehensive visualization and evaluation tools
+- Cross-validation support
+
+
+## Requirements
+
+- Python 3.8+
+- PyTorch 1.9+
+- CUDA (optional, for GPU acceleration)
+- Other dependencies:
+  ```
+  numpy
+  pandas
+  matplotlib
+  seaborn
+  scikit-learn
+  opencv-python
+  scipy
+  tqdm
+  torchvision
+  timm
+  ```
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd breast-density-pipeline
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Ensure your data is organized according to the expected structure:
+   - CT scan data in `D:/Dataset_only_breast`
+   - Segmentation data in `D:/Dataset_only_breast_segmentation`
+   - Excel file with patient data at `D:/Desktop/breast cancer.xlsx`
+
+## Directory Structure
+
+```
+breast-density-pipeline/
+├── improved_bd_pipeline_model_selection.py    # Main pipeline implementation
+├── model_selection.py                         # Model architectures and selection
+├── model_selection_config.py                  # Configuration presets
+├── run_model_selection.py                     # Script to run model selection
+├── predict_breast_density.py                  # Prediction script
+├── main.py                                    # Main execution script
+└── README.md                                  # This file
+```
+
+## Quick Start
+
+### 1. Train with Model Selection
+
+Run model selection with default configuration:
+```bash
+python run_model_selection.py FULL_EVALUATION
+```
+
+### 2. Make Predictions
+
+After training, use the prediction script:
+```bash
+python predict_breast_density.py
+```
+
+## Configuration
+
+The pipeline offers several preset configurations in `model_selection_config.py`:
+
+
+## Model Architectures
+
+The pipeline includes six different architectures:
+
+1. **BreastDensity3DNet**: Traditional CNN with attention blocks
+2. **LightweightBreastDensityNet**: Efficient model for fast inference
+3. **DeepBreastDensityNet**: Deeper CNN for enhanced feature extraction
+4. **ResNetBreastDensityNet**: ResNet-based architecture
+5. **BEiTBreastDensityNet**: Vision Transformer adapted for medical imaging
+6. **BEiTWithCNNBreastDensityNet**: Hybrid CNN-Transformer architecture
+
+
+### Programmatic Usage
+
+```python
+from improved_bd_pipeline_model_selection import BreastDensityPipeline
+
+# Initialize pipeline
+pipeline = BreastDensityPipeline(
+    data_root="path/to/data",
+    segmentation_root="path/to/segmentation",
+    excel_path="path/to/excel",
+    output_dir="path/to/output"
+)
+
+# Load data
+pipeline.load_patient_data()
+
+# Train with model selection
+best_model_name, best_model, results = pipeline.train_with_model_selection(
+    epochs=50,
+    use_class_weights=True
+)
+
+# Make predictions
+prediction = pipeline.predict_with_selected_model(patient_id="P001")
+```
+
+## Features
+
+### 1. Synthetic Data Generation
+- Automatically generates synthetic samples for rare classes (A, B, D)
+- Uses different augmentation strategies for each class
+- Maintains anatomical realism
+
+### 2. Cross-Validation
+- 5-fold stratified cross-validation
+- Ensures rare classes are present in all folds
+- Comprehensive performance metrics
+
+### 3. Data Augmentation
+- Random rotations, flips, and elastic deformations
+- Brightness adjustments and noise addition
+- Different strategies for original vs. synthetic samples
+
+### 4. Visualization Tools
+- Confusion matrices
+- ROC curves
+- Feature distribution plots
+- Multi-slice visualizations
+- Model comparison charts
+
+### 5. Rare Class Handling
+- Class-weighted loss functions
+- Focal loss for imbalanced data
+- Balanced sampling strategies
+- Special metrics for rare classes
+
+## Output
+
+The pipeline generates several outputs:
+
+1. **Trained Models**: Best performing model saved as `.pth` file
+2. **Prediction Results**: CSV files with predictions and confidence scores
+3. **Visualizations**:
+   - Confusion matrices
+   - Training curves
+   - Feature distributions
+   - Model comparison charts
+4. **Evaluation Metrics**:
+   - Accuracy, F1-score, precision, recall
+   - Per-class metrics
+   - Cross-validation results
