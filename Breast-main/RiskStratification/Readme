@@ -1,163 +1,157 @@
-# Breast Cancer Risk Stratification Model
+Multi-Instance Learning (MIL) Breast Cancer Risk Prediction Models
+This repository contains two advanced Multi-Instance Learning models for breast cancer risk prediction using BI-RADS classifications and medical imaging data.
+🎯 Overview
+The project implements two complementary MIL approaches:
 
-A multimodal deep learning pipeline for breast cancer risk assessment that classifies patients into three risk categories (low, medium, high) using clinical data and CT imaging.
+Enhanced MIL Model (enhanced_mil_model.py) - Individual breast training with real ROC/PR curves
+Bilateral MIL Model (bilateral_mil_english.py) - Combined bilateral training with asymmetry analysis
 
-## Overview
+Both models use attention mechanisms to focus on the most relevant image slices and combine imaging features with clinical data for comprehensive risk assessment.
+📋 Models Description
+Enhanced MIL Model
 
-This pipeline combines clinical features with CT scan data to perform risk stratification. The architecture uses a simple concatenation approach with separate processing branches for clinical and imaging data.
+Architecture: Individual breast bags (left/right trained separately)
+Max Instances: 10 slices per bag
+Key Features:
 
-## Architecture
+Real ROC/PR curve generation using cached predictions
+Patient-aware data splitting to prevent leakage
+Comprehensive overfitting detection
+Multi-criteria model selection
+Enhanced data augmentation for minority class
 
-### Model Components
 
-1. **Clinical Branch**:
-   - Dense layer (64 units) with ReLU activation
-   - Batch Normalization
-   - Dropout (0.7)
-   - L2 regularization (0.02)
 
-2. **Image Branch**:
-   - Pre-trained EfficientNetB2 backbone (frozen)
-   - Global Average Pooling
-   - Dense layer (64 units)
-   - Batch Normalization
-   - Dropout (0.7)
+Bilateral MIL Model
 
-3. **Fusion and Classification**:
-   - Simple concatenation of clinical and image features
-   - Dense layer (64 units) with strong regularization
-   - Softmax output for 3-class classification
+Architecture: Combined bilateral training (left + right breast together)
+Max Instances: 20 slices per bag (combined)
+Key Features:
 
-## Installation
+BI-RADS asymmetry feature engineering
+Bilateral attention mechanism
+Integrated left-right breast analysis
+Performance validation and deep analysis
 
-```bash
-pip install tensorflow>=2.10.0
-pip install scikit-learn>=1.0.0
-pip install pandas numpy matplotlib seaborn
-pip install pydicom opencv-python scikit-image
-pip install tqdm joblib
-```
 
-## Data Structure
 
-### Required Data Format
+🏗️ Architecture
+Core Components
+Input Layer:
+├── Bag Input: (batch_size, max_instances, 128, 128, 3)
+├── Instance Mask: (batch_size, max_instances)
+└── Clinical Input: (batch_size, 8)
 
-1. **Clinical Data (Excel)**:
-   - `PID`: Patient ID
-   - `density`: Breast density (A/B/C/D)
-   - `risk`: Risk category (low/medium/high)
-   - `history`: Family history (0/1)
-   - `年龄`: Age
-   - `BMI`: Body Mass Index
+Instance Encoder (MobileNetV2):
+├── Base Model: MobileNetV2 (α=0.5, weights='imagenet')
+├── Global Average Pooling
+├── Dense(128, ReLU) → BatchNorm → Dropout(0.3)
+└── Output: 128-dimensional features per instance
 
-2. **DICOM Files**:
-   ```
-   dicom_root_dir/
-   ├── patient_id/
-   │   └── series_id/
-   │       ├── slice_001.dcm
-   │       └── ...
-   ```
+Attention Mechanism:
+├── Attention Layer (dim=64)
+├── Learns importance weights for each instance
+└── Weighted aggregation of instance features
 
-3. **Segmentation Masks**:
-   ```
-   segmentation_root_dir/
-   ├── patient_id/
-   │   └── series_id/
-   │       ├── breast_mask.npy
-   │       └── glandular_tissue_mask.npy
-   ```
+Clinical Feature Processing:
+├── Dense(32) → BatchNorm → LeakyReLU → Dropout(0.3)
+└── Dense(16) → BatchNorm → LeakyReLU
 
-## Configuration
+Feature Fusion:
+├── Concatenate image and clinical features
+├── Dense(64) → BatchNorm → LeakyReLU → Dropout(0.4)
+└── Dense(32) → BatchNorm → LeakyReLU → Dropout(0.3)
 
-Edit `config.py` to set your parameters:
+Output Layer:
+└── Dense(2, Softmax) → Risk Prediction (Medium/High)
+📊 Data Requirements
+Cache Structure
+The models expect pre-processed data in the following cache format:
+cache/
+└── optimized_cache/
+    ├── breast_data_v1_clinical.pkl.gz    # Clinical features
+    ├── breast_data_v1_images.h5          # Image data
+    └── breast_data_v1_mapping.pkl.gz     # Mapping information
+Clinical Features
 
-```python
-DATA_PATHS = {
-    'excel_path': 'path/to/clinical_data.xlsx',
-    'dicom_root_dir': 'path/to/dicom_files',
-    'segmentation_root_dir': 'path/to/segmentation_masks'
-}
+Age: Patient age
+BMI: Body Mass Index
+Density: Breast density (numeric)
+Family History: Family history indicator
+Age Group: Derived age grouping
+BMI Category: BMI classification
+Age×Density: Interaction feature
+BI-RADS Asymmetry: Bilateral asymmetry score (Bilateral model only)
 
-```
+Image Data
 
-## Usage
+Format: HDF5 with patient groups
+Structure:
+patient_id/
+├── left_images: (n_slices, 128, 128, 3)
+└── right_images: (n_slices, 128, 128, 3)
 
-### Training
+Preprocessing: Normalized to [0, 1] range
 
-```bash
-python main.py 
+📈 Model Training Process
+Enhanced MIL Pipeline
 
-### Options
+Data Loading: Load from cache with patient-aware splitting
+Model Training: Train 3 ensemble models:
 
-- `--use-all-slices`: Process all CT slices (default: subset)
-- `--focus-glandular`: Focus on glandular tissue regions
-- `--gpu-memory-limit`: Set GPU memory limit (MB)
-- `--mode`: Choose from train/evaluate/predict
+balanced: Balanced class weights
+high_risk_focus: Emphasizes high-risk detection
+conservative: Conservative approach
 
-## Feature Processing
 
-### Clinical Features
-- Basic features: density, history, age, BMI
-- Derived features: age groups, BMI categories
-- Interaction features: density-age, density-BMI, density-history
-- Feature selection using ensemble method (ANOVA, mutual information, random forest)
+Prediction Caching: Store predictions for real ROC/PR curves
+Model Selection: Choose best model based on test set performance
+Visualization: Generate comprehensive plots and analysis
 
-### Image Processing
-- Target size: 224x224
-- CLAHE enhancement for better contrast
-- ImageNet normalization (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-- Focus on glandular tissue regions
+Bilateral MIL Pipeline
 
-## Training Details
+Bilateral Data Preparation: Combine left/right breast data
+Asymmetry Feature Engineering: Calculate BI-RADS asymmetry
+Ensemble Training: Train bilateral-specific models
+Performance Validation: Deep analysis and robustness testing
+Attention Analysis: Examine bilateral attention patterns
 
-- **Optimizer**: Adam with learning rate 0.0001
-- **Loss**: Categorical crossentropy with class weights
-- **Callbacks**:
-  - Early stopping
-  - Model checkpoint (saves best validation accuracy)
+Performance Validation
+The models include comprehensive validation through performance_validation.py:
+Validation Components
 
-## Evaluation Metrics
+Data Leakage Detection: Ensures no patient overlap between sets
+Bootstrap Validation: Statistical confidence estimation
+Prediction Confidence Analysis: Model certainty assessment
+Robustness Testing: Noise resistance evaluation
+Feature Quality Analysis: BI-RADS asymmetry impact
+Attention Pattern Analysis: Attention mechanism effectiveness
 
-- Slice-level and patient-level accuracy
-- Confusion matrices
-- ROC curves and AUC scores
-- Classification reports (precision, recall, F1-score)
+🎯 Key Features
+Enhanced MIL Model Highlights
+✅ Real Performance Metrics: Actual ROC/PR curves from model predictions
+✅ No Data Leakage: Patient-aware splitting prevents contamination
+✅ Robust Evaluation: Multiple validation strategies
+✅ Production Ready: Complete logging and error handling
+✅ Interpretable: Attention weights show important slices
+Bilateral MIL Model Highlights
+✅ Bilateral Analysis: Considers both breasts simultaneously
+✅ Asymmetry Detection: BI-RADS asymmetry as feature
+✅ Comprehensive Validation: Deep performance analysis
+✅ Attention Visualization: Bilateral attention patterns
+✅ Clinical Integration: Enhanced clinical feature engineering
+⚙️ Technical Requirements
+Dependencies
+tensorflow>=2.8.0
+scikit-learn>=1.0.0
+numpy>=1.21.0
+pandas>=1.3.0
+matplotlib>=3.5.0
+seaborn>=0.11.0
+h5py>=3.6.0
+tqdm>=4.62.0
+System Requirements
 
-## Output Structure
-
-```
-output_dir/
-├── models/
-│   └── multimodal_dl/
-│       ├── best_model.h5
-│       └── clinical_scaler.pkl
-├── features/
-│   ├── clinical_features.csv
-│   └── feature_importance.csv
-├── plots/
-│   ├── training_history.png
-│   ├── confusion_matrix.png
-│   └── roc_curve.png
-└── results/
-    └── predictions.csv
-```
-
-## Key Characteristics
-
-1. **Strong Regularization**: High dropout (0.7) and L2 regularization to prevent overfitting
-2. **Frozen Backbone**: Pre-trained weights are not fine-tuned
-3. **Simple Fusion**: Direct concatenation without attention mechanisms
-4. **Class Balancing**: Weighted loss function for imbalanced data
-5. **Patient-Level Evaluation**: Aggregates slice predictions per patient
-
-## Limitations
-
-- No complex fusion mechanisms (attention, cross-attention)
-- Fixed to EfficientNetB2 backbone
-- Strong regularization may limit model capacity
-- Requires pre-computed segmentation masks
-
-## Performance Notes
-
-The model is designed with strong regularization to prevent overfitting on small datasets. The high dropout rate (0.7) and frozen backbone ensure stable training but may limit performance on larger datasets.
+GPU: CUDA-compatible GPU recommended
+RAM: 16GB+ recommended for large datasets
+Storage: Sufficient space for cache files and results
